@@ -1616,7 +1616,8 @@ var TeaVM=TeaVM||{};TeaVM.wasmGC=TeaVM.wasmGC||(()=>{let n=new Map;let e=null;le
 			<div id="friends_host_steps">
 				<ol>
 					<li>Open your world in <b>Singleplayer</b>.</li>
-					<li>Press <b>Esc</b> &rarr; <b>Open to LAN</b> &rarr; <b>Start LAN World</b>.</li>
+					<li>Press <b>Esc</b> &rarr; <b>World Options...</b></li>
+					<li>Click <b>Relay LAN: OFF</b> so it says <b>ON</b>, then <b>Apply Changes</b>.</li>
 					<li>Your room code shows up here. Give it to your friends.</li>
 				</ol>
 			</div>
@@ -1631,7 +1632,7 @@ var TeaVM=TeaVM||{};TeaVM.wasmGC=TeaVM.wasmGC||(()=>{let n=new Map;let e=null;le
 			<div style="margin-bottom:8px">Type your friend's room code:</div>
 			<input id="friends_join_input" maxlength="16" autocomplete="off" spellcheck="false" placeholder="CODE">
 			<button class="go" id="friends_join_go" disabled>Join room</button>
-			<div class="muted">The game reloads and joins their world.</div>
+			<div class="muted">The game reloads and joins their world. If that doesn't work: Singleplayer &rarr; <b>Join LAN World</b> and type the code there.</div>
 		</div>
 	</div>
 	<script type="text/javascript">
@@ -1666,7 +1667,7 @@ var TeaVM=TeaVM||{};TeaVM.wasmGC=TeaVM.wasmGC||(()=>{let n=new Map;let e=null;le
 		for (var i = 0; i < tabs.length; i++) tabs[i].addEventListener("click", function () { tab(this.getAttribute("data-tab")); });
 
 		// HOST: the game logs the code when "Open to LAN" succeeds; pick it up from there.
-		var codeRe = /room opened (?:on (\S+) )?with code (\S+)/i;
+		var codeRe = /(?:room opened (?:on \S+ )?with code|LAN join code:)\s*([A-Za-z0-9-]+)/i;
 		function onHostCode(code) {
 			document.getElementById("friends_code_text").textContent = code;
 			show(document.getElementById("friends_host_steps"), false);
@@ -1679,7 +1680,7 @@ var TeaVM=TeaVM||{};TeaVM.wasmGC=TeaVM.wasmGC||(()=>{let n=new Map;let e=null;le
 				try {
 					for (var i = 0; i < arguments.length; i++) {
 						var m = codeRe.exec(String(arguments[i]));
-						if (m) onHostCode(m[2]);
+						if (m) onHostCode(m[1]);
 					}
 				} catch (e) {}
 				return orig.apply(this, arguments);
