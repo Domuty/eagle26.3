@@ -1197,6 +1197,8 @@ Z12aSGrXHoYwXux247w3UelvBftWMZo0Wlbr3iVBUh8E3CfkL+41ZHFc3Qbaqn8YqSFHaWIH21A2KQEL
 		window.eaglercraftXIwaBundleURL = "";
 		window.eaglercraftXOpts = {
 			container: "game_frame",
+			// "Play with friends" button: ?room=CODE joins that friend's shared (LAN) world.
+			joinServer: (function () { var m = /[?&]room=([A-Za-z0-9]+)/.exec(window.location.search); return m ? "eagler-p2p-lan:" + m[1] : undefined; })(),
 			// Server list. "Donuts (School)" is the survival server in server/ (see server/README.md).
 			// Put your bridge's public wss:// address here.
 			servers: [
@@ -1581,5 +1583,125 @@ var TeaVM=TeaVM||{};TeaVM.wasmGC=TeaVM.wasmGC||(()=>{let n=new Map;let e=null;le
 		<div class="phone" aria-hidden="true"></div>
 		<div><strong>Rotate your device</strong>Eaglercraft requires landscape mode on phones.</div>
 	</div>
+	<!-- Play with friends: floating room-code button -->
+	<style>
+		#friends_btn{position:fixed;right:16px;bottom:16px;z-index:2147483640;width:56px;height:56px;border-radius:50%;border:2px solid rgba(255,255,255,.85);background:#3c8527;color:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(0,0,0,.5);transition:transform .15s,opacity .2s;padding:0}
+		#friends_btn:hover{transform:scale(1.08)}
+		#friends_btn svg{width:28px;height:28px}
+		#friends_btn.hidden,#friends_panel.hidden{display:none}
+		#friends_btn .dot{position:absolute;top:2px;right:2px;width:14px;height:14px;border-radius:50%;background:#ffcc00;border:2px solid #1b1b1b;display:none}
+		#friends_btn.live .dot{display:block}
+		#friends_panel{position:fixed;right:16px;bottom:84px;z-index:2147483641;width:300px;max-width:calc(100vw - 32px);background:#1e1e1e;color:#eee;border:2px solid #555;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.6);font:14px/1.4 system-ui,sans-serif;padding:14px;box-sizing:border-box}
+		#friends_panel h3{margin:0 0 10px;font-size:16px}
+		#friends_panel .tabs{display:flex;gap:6px;margin-bottom:12px}
+		#friends_panel .tabs button{flex:1;padding:8px;border:0;border-radius:8px;background:#333;color:#ddd;cursor:pointer;font:inherit}
+		#friends_panel .tabs button.on{background:#3c8527;color:#fff}
+		#friends_panel ol{margin:0;padding-left:18px}
+		#friends_panel li{margin-bottom:4px}
+		#friends_panel .code{margin-top:12px;padding:10px;border-radius:8px;background:#111;text-align:center;font:700 26px/1.2 ui-monospace,monospace;letter-spacing:3px;user-select:all}
+		#friends_panel .muted{color:#999;font-size:12px;margin-top:6px;text-align:center}
+		#friends_panel input{width:100%;box-sizing:border-box;padding:10px;border-radius:8px;border:2px solid #444;background:#111;color:#fff;font:700 20px ui-monospace,monospace;text-align:center;letter-spacing:3px;text-transform:uppercase}
+		#friends_panel .go{width:100%;margin-top:10px;padding:10px;border:0;border-radius:8px;background:#3c8527;color:#fff;font:600 15px system-ui,sans-serif;cursor:pointer}
+		#friends_panel .go:disabled{opacity:.5;cursor:default}
+		#friends_panel .small{padding:6px 10px;margin-top:8px;border:0;border-radius:6px;background:#333;color:#ddd;cursor:pointer;font:inherit;width:100%}
+	</style>
+	<button id="friends_btn" class="hidden" title="Play with friends" aria-label="Play with friends">
+		<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M16 11c1.66 0 2.99-1.34 2.99-3S17.66 5 16 5s-3 1.34-3 3 1.34 3 3 3zm-8 0c1.66 0 2.99-1.34 2.99-3S9.66 5 8 5 5 6.34 5 8s1.34 3 3 3zm0 2c-2.33 0-7 1.17-7 3.5V19h14v-2.5C15 14.17 10.33 13 8 13zm8 0c-.29 0-.62.02-.97.05 1.16.84 1.97 1.97 1.97 3.45V19h6v-2.5c0-2.33-4.67-3.5-7-3.5z"/></svg>
+		<span class="dot"></span>
+	</button>
+	<div id="friends_panel" class="hidden" role="dialog" aria-label="Play with friends">
+		<h3>Play with friends</h3>
+		<div class="tabs"><button data-tab="host" class="on">Host</button><button data-tab="join">Join</button></div>
+		<div data-pane="host">
+			<div id="friends_host_steps">
+				<ol>
+					<li>Open your world in <b>Singleplayer</b>.</li>
+					<li>Press <b>Esc</b> &rarr; <b>Open to LAN</b> &rarr; <b>Start LAN World</b>.</li>
+					<li>Your room code shows up here. Give it to your friends.</li>
+				</ol>
+			</div>
+			<div id="friends_host_code" class="hidden">
+				<div>Your room is open! Room code:</div>
+				<div class="code" id="friends_code_text"></div>
+				<button class="small" id="friends_copy">Copy code</button>
+				<div class="muted">Friends click this button &rarr; Join &rarr; type the code.</div>
+			</div>
+		</div>
+		<div data-pane="join" class="hidden">
+			<div style="margin-bottom:8px">Type your friend's room code:</div>
+			<input id="friends_join_input" maxlength="16" autocomplete="off" spellcheck="false" placeholder="CODE">
+			<button class="go" id="friends_join_go" disabled>Join room</button>
+			<div class="muted">The game reloads and joins their world.</div>
+		</div>
+	</div>
+	<script type="text/javascript">
+	(function () {
+		var btn = document.getElementById("friends_btn"), panel = document.getElementById("friends_panel");
+		var input = document.getElementById("friends_join_input"), go = document.getElementById("friends_join_go");
+		function show(el, on) { el.classList.toggle("hidden", !on); }
+
+		// Show the button once the game is up, and hide it while the mouse is captured
+		// for gameplay so it never covers the world.
+		function refresh() {
+			var ready = window.__eaglerMenuReady === true || window.__eaglerGameReady === true || !document.getElementById("loading_screen") || document.getElementById("loading_screen").style.display === "none";
+			show(btn, ready && !document.pointerLockElement);
+			if (document.pointerLockElement) show(panel, false);
+		}
+		document.addEventListener("pointerlockchange", refresh);
+		setInterval(refresh, 1000);
+
+		btn.addEventListener("click", function (e) { e.stopPropagation(); show(panel, panel.classList.contains("hidden")); });
+		panel.addEventListener("mousedown", function (e) { e.stopPropagation(); });
+		panel.addEventListener("keydown", function (e) { e.stopPropagation(); });
+		panel.addEventListener("keyup", function (e) { e.stopPropagation(); });
+		panel.addEventListener("keypress", function (e) { e.stopPropagation(); });
+
+		var tabs = panel.querySelectorAll(".tabs button");
+		function tab(name) {
+			for (var i = 0; i < tabs.length; i++) tabs[i].classList.toggle("on", tabs[i].getAttribute("data-tab") === name);
+			show(panel.querySelector('[data-pane="host"]'), name === "host");
+			show(panel.querySelector('[data-pane="join"]'), name === "join");
+			if (name === "join") setTimeout(function () { input.focus(); }, 0);
+		}
+		for (var i = 0; i < tabs.length; i++) tabs[i].addEventListener("click", function () { tab(this.getAttribute("data-tab")); });
+
+		// HOST: the game logs the code when "Open to LAN" succeeds; pick it up from there.
+		var codeRe = /room opened (?:on (\S+) )?with code (\S+)/i;
+		function onHostCode(code) {
+			document.getElementById("friends_code_text").textContent = code;
+			show(document.getElementById("friends_host_steps"), false);
+			show(document.getElementById("friends_host_code"), true);
+			btn.classList.add("live");
+		}
+		["log", "info", "warn"].forEach(function (k) {
+			var orig = console[k];
+			console[k] = function () {
+				try {
+					for (var i = 0; i < arguments.length; i++) {
+						var m = codeRe.exec(String(arguments[i]));
+						if (m) onHostCode(m[2]);
+					}
+				} catch (e) {}
+				return orig.apply(this, arguments);
+			};
+		});
+		document.getElementById("friends_copy").addEventListener("click", function () {
+			var t = document.getElementById("friends_code_text").textContent, b = this;
+			try { navigator.clipboard.writeText(t).then(function () { b.textContent = "Copied!"; setTimeout(function () { b.textContent = "Copy code"; }, 1500); }); } catch (e) {}
+		});
+
+		// JOIN: reload with ?room=CODE; the config at the top turns that into joinServer.
+		input.addEventListener("input", function () {
+			input.value = input.value.toUpperCase().replace(/[^A-Z0-9]/g, "");
+			go.disabled = input.value.length < 3;
+		});
+		input.addEventListener("keydown", function (e) { if (e.key === "Enter" && !go.disabled) go.click(); });
+		go.addEventListener("click", function () {
+			var url = new URL(window.location.href);
+			url.searchParams.set("room", input.value);
+			window.location.href = url.toString();
+		});
+	})();
+	</script>
 </body>
 </html>
