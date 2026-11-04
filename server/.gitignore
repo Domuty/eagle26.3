@@ -1,0 +1,3 @@
+node_modules/
+minecraft/*
+!minecraft/server.properties

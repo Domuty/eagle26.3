@@ -1,0 +1,8 @@
+{
+  "name": "donuts-school-server",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Eaglercraft 26.3 bridge for the Donuts (School) survival server",
+  "scripts": { "bridge": "node bridge.js" },
+  "dependencies": { "ws": "8.18.0" }
+}
